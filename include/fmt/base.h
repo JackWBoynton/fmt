@@ -170,69 +170,6 @@
 #  define FMT_USE_ERROR_CODES 0
 #endif
 
-#if FMT_USE_ERROR_CODES
-// Error codes for fmt operations when exceptions are not available
-enum class fmt_error_code : int {
-  none = 0,
-  format_error = 1,
-  format_parse_error = 2,
-  invalid_argument = 3,
-  out_of_range = 4,
-  system_error = 5,
-  unknown_error = 99
-};
-
-namespace detail {
-// Thread-local error state for EMSCRIPTEN
-struct error_state {
-  fmt_error_code code = fmt_error_code::none;
-  const char* message = nullptr;
-  const char* file = nullptr;
-  int line = 0;
-};
-
-// Get thread-local error state
-FMT_API error_state& get_error_state() noexcept;
-
-// Set error state
-FMT_API void set_error_state(fmt_error_code code, const char* message, 
-                            const char* file = nullptr, int line = 0) noexcept;
-
-// Clear error state
-FMT_API void clear_error_state() noexcept;
-}  // namespace detail
-
-// Helper macros for error handling in EMSCRIPTEN mode
-#define FMT_ERROR_RETURN(return_value) \
-  do { if (has_error()) return (return_value); } while (0)
-
-#define FMT_ERROR_RETURN_VOID() \
-  do { if (has_error()) return; } while (0)
-
-// Public API for error code handling
-inline fmt_error_code get_last_error() noexcept {
-  return detail::get_error_state().code;
-}
-
-inline const char* get_last_error_message() noexcept {
-  return detail::get_error_state().message;
-}
-
-inline void clear_last_error() noexcept {
-  detail::clear_error_state();
-}
-
-// Check if there's a pending error
-inline bool has_error() noexcept {
-  return get_last_error() != fmt_error_code::none;
-}
-#else
-// Empty implementations when error codes are not used
-#define FMT_ERROR_RETURN(return_value) do { } while (0)
-#define FMT_ERROR_RETURN_VOID() do { } while (0)
-inline bool has_error() noexcept { return false; }
-inline void clear_last_error() noexcept { }
-#endif  // FMT_USE_ERROR_CODES
 
 #ifdef FMT_NO_UNIQUE_ADDRESS
 // Use the provided definition.
@@ -363,6 +300,71 @@ FMT_PRAGMA_CLANG(diagnostic push)
 #ifndef FMT_API
 #  define FMT_API
 #endif
+
+#if FMT_USE_ERROR_CODES
+// Error codes for fmt operations when exceptions are not available
+enum class fmt_error_code : int {
+  none = 0,
+  format_error = 1,
+  format_parse_error = 2,
+  invalid_argument = 3,
+  out_of_range = 4,
+  system_error = 5,
+  unknown_error = 99
+};
+
+namespace detail {
+// Thread-local error state for EMSCRIPTEN
+struct error_state {
+  fmt_error_code code = fmt_error_code::none;
+  const char* message = nullptr;
+  const char* file = nullptr;
+  int line = 0;
+};
+
+// Get thread-local error state
+FMT_API error_state& get_error_state() noexcept;
+
+// Set error state
+FMT_API void set_error_state(fmt_error_code code, const char* message, 
+                            const char* file = nullptr, int line = 0) noexcept;
+
+// Clear error state
+FMT_API void clear_error_state() noexcept;
+}  // namespace detail
+
+// Public API for error code handling
+inline fmt_error_code get_last_error() noexcept {
+  return detail::get_error_state().code;
+}
+
+inline const char* get_last_error_message() noexcept {
+  return detail::get_error_state().message;
+}
+
+inline void clear_last_error() noexcept {
+  detail::clear_error_state();
+}
+
+// Check if there's a pending error
+inline bool has_error() noexcept {
+  return get_last_error() != fmt_error_code::none;
+}
+
+// Helper macros for error handling in EMSCRIPTEN mode
+#define FMT_ERROR_RETURN(return_value) \
+  do { if (has_error()) return (return_value); } while (0)
+
+#define FMT_ERROR_RETURN_VOID() \
+  do { if (has_error()) return; } while (0)
+
+#else
+// Empty implementations when error codes are not used
+#define FMT_ERROR_RETURN(return_value) do { } while (0)
+#define FMT_ERROR_RETURN_VOID() do { } while (0)
+inline bool has_error() noexcept { return false; }
+inline void clear_last_error() noexcept { }
+#endif  // FMT_USE_ERROR_CODES
 
 #ifndef FMT_OPTIMIZE_SIZE
 #  define FMT_OPTIMIZE_SIZE 0
