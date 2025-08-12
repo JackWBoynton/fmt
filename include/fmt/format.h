@@ -174,6 +174,12 @@ FMT_END_NAMESPACE
 #    else
 #      define FMT_THROW(x) throw x
 #    endif
+#  elif FMT_USE_ERROR_CODES
+#    define FMT_THROW(x) \
+      do { \
+        ::fmt::detail::set_error_state( \
+          ::fmt::fmt_error_code::format_error, (x).what(), __FILE__, __LINE__); \
+      } while (0)
 #  else
 #    define FMT_THROW(x) \
       ::fmt::detail::assert_fail(__FILE__, __LINE__, (x).what())

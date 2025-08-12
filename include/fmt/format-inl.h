@@ -137,6 +137,10 @@ FMT_FUNC void report_error(const char* message) {
   // Use FMT_THROW instead of throw to avoid bogus unreachable code warnings
   // from MSVC.
   FMT_THROW(format_error(message));
+#elif FMT_USE_ERROR_CODES
+  // For EMSCRIPTEN, set error code instead of aborting
+  detail::set_error_state(fmt_error_code::format_error, message);
+  return;  // Return instead of aborting to allow program to continue
 #else
   fputs(message, stderr);
   abort();
@@ -1448,11 +1452,32 @@ namespace detail {
 
 FMT_FUNC void vformat_to(buffer<char>& buf, string_view fmt, format_args args,
                          locale_ref loc) {
+#if FMT_USE_ERROR_CODES
+  // Clear any previous error state
+  clear_error_state();
+#endif
+  
   auto out = appender(buf);
-  if (fmt.size() == 2 && equal2(fmt.data(), "{}"))
-    return args.get(0).visit(default_arg_formatter<char>{out});
+  if (fmt.size() == 2 && equal2(fmt.data(), "{}")) {
+    args.get(0).visit(default_arg_formatter<char>{out});
+#if FMT_USE_ERROR_CODES
+    // Check if an error occurred during formatting
+    if (has_error()) {
+      buf.clear();  // Clear the buffer on error
+    }
+#endif
+    return;
+  }
+  
   parse_format_string(
       fmt, format_handler<char>{parse_context<char>(fmt), {out, args, loc}});
+      
+#if FMT_USE_ERROR_CODES
+  // Check if an error occurred during parsing/formatting
+  if (has_error()) {
+    buf.clear();  // Clear the buffer on error
+  }
+#endif
 }
 
 template <typename T> struct span {

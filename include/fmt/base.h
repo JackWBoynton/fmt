@@ -144,6 +144,8 @@
 // Check if exceptions are disabled.
 #ifdef FMT_USE_EXCEPTIONS
 // Use the provided definition.
+#elif defined(__EMSCRIPTEN__)
+#  define FMT_USE_EXCEPTIONS 0  // Disable exceptions on EMSCRIPTEN
 #elif defined(__GNUC__) && !defined(__EXCEPTIONS)
 #  define FMT_USE_EXCEPTIONS 0
 #elif defined(__clang__) && !defined(__cpp_exceptions)
@@ -160,6 +162,77 @@
 #  define FMT_TRY if (true)
 #  define FMT_CATCH(x) if (false)
 #endif
+
+// EMSCRIPTEN error code handling system
+#ifdef __EMSCRIPTEN__
+#  define FMT_USE_ERROR_CODES 1
+#else
+#  define FMT_USE_ERROR_CODES 0
+#endif
+
+#if FMT_USE_ERROR_CODES
+// Error codes for fmt operations when exceptions are not available
+enum class fmt_error_code : int {
+  none = 0,
+  format_error = 1,
+  format_parse_error = 2,
+  invalid_argument = 3,
+  out_of_range = 4,
+  system_error = 5,
+  unknown_error = 99
+};
+
+namespace detail {
+// Thread-local error state for EMSCRIPTEN
+struct error_state {
+  fmt_error_code code = fmt_error_code::none;
+  const char* message = nullptr;
+  const char* file = nullptr;
+  int line = 0;
+};
+
+// Get thread-local error state
+FMT_API error_state& get_error_state() noexcept;
+
+// Set error state
+FMT_API void set_error_state(fmt_error_code code, const char* message, 
+                            const char* file = nullptr, int line = 0) noexcept;
+
+// Clear error state
+FMT_API void clear_error_state() noexcept;
+}  // namespace detail
+
+// Helper macros for error handling in EMSCRIPTEN mode
+#define FMT_ERROR_RETURN(return_value) \
+  do { if (has_error()) return (return_value); } while (0)
+
+#define FMT_ERROR_RETURN_VOID() \
+  do { if (has_error()) return; } while (0)
+
+// Public API for error code handling
+inline fmt_error_code get_last_error() noexcept {
+  return detail::get_error_state().code;
+}
+
+inline const char* get_last_error_message() noexcept {
+  return detail::get_error_state().message;
+}
+
+inline void clear_last_error() noexcept {
+  detail::clear_error_state();
+}
+
+// Check if there's a pending error
+inline bool has_error() noexcept {
+  return get_last_error() != fmt_error_code::none;
+}
+#else
+// Empty implementations when error codes are not used
+#define FMT_ERROR_RETURN(return_value) do { } while (0)
+#define FMT_ERROR_RETURN_VOID() do { } while (0)
+inline bool has_error() noexcept { return false; }
+inline void clear_last_error() noexcept { }
+#endif  // FMT_USE_ERROR_CODES
 
 #ifdef FMT_NO_UNIQUE_ADDRESS
 // Use the provided definition.
@@ -669,7 +742,11 @@ struct formatter {
 /// Reports a format error at compile time or, via a `format_error` exception,
 /// at runtime.
 // This function is intentionally not constexpr to give a compile-time error.
+#if FMT_USE_ERROR_CODES
+FMT_API void report_error(const char* message);
+#else
 FMT_NORETURN FMT_API void report_error(const char* message);
+#endif
 
 enum class presentation_type : unsigned char {
   // Common specifiers:
