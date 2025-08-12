@@ -139,7 +139,7 @@ FMT_FUNC void report_error(const char* message) {
   FMT_THROW(format_error(message));
 #elif FMT_USE_ERROR_CODES
   // For EMSCRIPTEN, set error code instead of aborting
-  detail::set_error_state(fmt_error_code::format_error, message);
+  ::fmt::detail::set_error_state(::fmt::fmt_error_code::format_error, message);
   return;  // Return instead of aborting to allow program to continue
 #else
   fputs(message, stderr);
@@ -1454,7 +1454,7 @@ FMT_FUNC void vformat_to(buffer<char>& buf, string_view fmt, format_args args,
                          locale_ref loc) {
 #if FMT_USE_ERROR_CODES
   // Clear any previous error state
-  clear_error_state();
+  ::fmt::detail::clear_error_state();
 #endif
   
   auto out = appender(buf);

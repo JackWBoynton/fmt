@@ -12,13 +12,13 @@ namespace detail {
 
 #if FMT_USE_ERROR_CODES
 // EMSCRIPTEN error state implementation
-thread_local error_state g_error_state;
+thread_local ::fmt::detail::error_state g_error_state;
 
-FMT_FUNC error_state& get_error_state() noexcept {
+FMT_FUNC ::fmt::detail::error_state& get_error_state() noexcept {
   return g_error_state;
 }
 
-FMT_FUNC void set_error_state(fmt_error_code code, const char* message, 
+FMT_FUNC void set_error_state(::fmt::fmt_error_code code, const char* message, 
                              const char* file, int line) noexcept {
   g_error_state.code = code;
   g_error_state.message = message;
@@ -27,7 +27,7 @@ FMT_FUNC void set_error_state(fmt_error_code code, const char* message,
 }
 
 FMT_FUNC void clear_error_state() noexcept {
-  g_error_state.code = fmt_error_code::none;
+  g_error_state.code = ::fmt::fmt_error_code::none;
   g_error_state.message = nullptr;
   g_error_state.file = nullptr;
   g_error_state.line = 0;

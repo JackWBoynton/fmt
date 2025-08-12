@@ -197,7 +197,8 @@
 #endif
 
 // Disable [[noreturn]] on MSVC/NVCC because of bogus unreachable code warnings.
-#if FMT_HAS_CPP_ATTRIBUTE(noreturn) && !FMT_MSC_VERSION && !defined(__NVCC__)
+// Also disable when using error codes since functions can return.
+#if FMT_HAS_CPP_ATTRIBUTE(noreturn) && !FMT_MSC_VERSION && !defined(__NVCC__) && !FMT_USE_ERROR_CODES
 #  define FMT_NORETURN [[noreturn]]
 #else
 #  define FMT_NORETURN
