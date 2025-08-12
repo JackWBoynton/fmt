@@ -302,6 +302,55 @@ FMT_PRAGMA_CLANG(diagnostic push)
 #  define FMT_API
 #endif
 
+#ifndef FMT_OPTIMIZE_SIZE
+#  define FMT_OPTIMIZE_SIZE 0
+#endif
+
+// FMT_BUILTIN_TYPE=0 may result in smaller library size at the cost of higher
+// per-call binary size by passing built-in types through the extension API.
+#ifndef FMT_BUILTIN_TYPES
+#  define FMT_BUILTIN_TYPES 1
+#endif
+
+#define FMT_APPLY_VARIADIC(expr) \
+  using unused = int[];          \
+  (void)unused { 0, (expr, 0)... }
+
+FMT_BEGIN_NAMESPACE
+
+// Implementations of enable_if_t and other metafunctions for older systems.
+template <bool B, typename T = void>
+using enable_if_t = typename std::enable_if<B, T>::type;
+template <bool B, typename T, typename F>
+using conditional_t = typename std::conditional<B, T, F>::type;
+template <bool B> using bool_constant = std::integral_constant<bool, B>;
+template <typename T>
+using remove_reference_t = typename std::remove_reference<T>::type;
+template <typename T>
+using remove_const_t = typename std::remove_const<T>::type;
+template <typename T>
+using remove_cvref_t = typename std::remove_cv<remove_reference_t<T>>::type;
+template <typename T>
+using make_unsigned_t = typename std::make_unsigned<T>::type;
+template <typename T>
+using underlying_t = typename std::underlying_type<T>::type;
+template <typename T> using decay_t = typename std::decay<T>::type;
+using nullptr_t = decltype(nullptr);
+
+#if (FMT_GCC_VERSION && FMT_GCC_VERSION < 500) || FMT_MSC_VERSION
+// A workaround for gcc 4.9 & MSVC v141 to make void_t work in a SFINAE context.
+template <typename...> struct void_t_impl {
+  using type = void;
+};
+template <typename... T> using void_t = typename void_t_impl<T...>::type;
+#else
+template <typename...> using void_t = void;
+#endif
+
+struct monostate {
+  constexpr monostate() {}
+};
+
 #if FMT_USE_ERROR_CODES
 // Error codes for fmt operations when exceptions are not available
 enum class fmt_error_code : int {
@@ -366,55 +415,6 @@ inline bool has_error() noexcept {
 inline bool has_error() noexcept { return false; }
 inline void clear_last_error() noexcept { }
 #endif  // FMT_USE_ERROR_CODES
-
-#ifndef FMT_OPTIMIZE_SIZE
-#  define FMT_OPTIMIZE_SIZE 0
-#endif
-
-// FMT_BUILTIN_TYPE=0 may result in smaller library size at the cost of higher
-// per-call binary size by passing built-in types through the extension API.
-#ifndef FMT_BUILTIN_TYPES
-#  define FMT_BUILTIN_TYPES 1
-#endif
-
-#define FMT_APPLY_VARIADIC(expr) \
-  using unused = int[];          \
-  (void)unused { 0, (expr, 0)... }
-
-FMT_BEGIN_NAMESPACE
-
-// Implementations of enable_if_t and other metafunctions for older systems.
-template <bool B, typename T = void>
-using enable_if_t = typename std::enable_if<B, T>::type;
-template <bool B, typename T, typename F>
-using conditional_t = typename std::conditional<B, T, F>::type;
-template <bool B> using bool_constant = std::integral_constant<bool, B>;
-template <typename T>
-using remove_reference_t = typename std::remove_reference<T>::type;
-template <typename T>
-using remove_const_t = typename std::remove_const<T>::type;
-template <typename T>
-using remove_cvref_t = typename std::remove_cv<remove_reference_t<T>>::type;
-template <typename T>
-using make_unsigned_t = typename std::make_unsigned<T>::type;
-template <typename T>
-using underlying_t = typename std::underlying_type<T>::type;
-template <typename T> using decay_t = typename std::decay<T>::type;
-using nullptr_t = decltype(nullptr);
-
-#if (FMT_GCC_VERSION && FMT_GCC_VERSION < 500) || FMT_MSC_VERSION
-// A workaround for gcc 4.9 & MSVC v141 to make void_t work in a SFINAE context.
-template <typename...> struct void_t_impl {
-  using type = void;
-};
-template <typename... T> using void_t = typename void_t_impl<T...>::type;
-#else
-template <typename...> using void_t = void;
-#endif
-
-struct monostate {
-  constexpr monostate() {}
-};
 
 // An enable_if helper to be used in template parameters which results in much
 // shorter symbols: https://godbolt.org/z/sWw4vP. Extra parentheses are needed
